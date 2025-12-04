@@ -1,10 +1,13 @@
-import './globals.css'
 import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import Script from 'next/script'
+import './globals.css'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Twitch Streaming Opportunity Analyzer | Find the Best Games to Stream',
-  description: 'Real-time analysis of the best games to stream on Twitch. Find streaming opportunities with less competition and better discoverability. Updated every 15 minutes.',
-  keywords: 'twitch, streaming, games, opportunities, streamer tools, best games to stream',
+  title: 'Twitch Stream Analyzer - Find the Best Games to Stream',
+  description: 'Real-time analysis of Twitch streaming opportunities. Find games with low competition and high discoverability for small streamers.',
 }
 
 export default function RootLayout({
@@ -14,7 +17,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <head>
+        {/* Google AdSense */}
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6164260798755117"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+      </head>
+      <body className={inter.className}>{children}</body>
     </html>
   )
 }
