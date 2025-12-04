@@ -40,6 +40,17 @@ export default function Home() {
   const [selectedGame, setSelectedGame] = useState<GameOpportunity | null>(null)
   const [countdown, setCountdown] = useState<number>(0)
 
+  // Helper function to create Twitch directory URL
+  const getTwitchUrl = (gameName: string) => {
+    const slug = gameName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .trim()
+    return `https://www.twitch.tv/directory/category/${slug}`
+  }
+
   useEffect(() => {
     fetchData()
     const interval = setInterval(fetchData, 15 * 60 * 1000)
@@ -178,32 +189,41 @@ export default function Home() {
                         </div>
 
                         {/* Purchase Links */}
-                        {(game.purchase_links.steam || game.purchase_links.epic) && (
-                          <div className="flex gap-2 mt-3">
-                            {game.purchase_links.steam && (
-                              <a
-                                href={game.purchase_links.steam}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="matrix-button-small"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                🎮 Buy on Steam
-                              </a>
-                            )}
-                            {game.purchase_links.epic && (
-                              <a
-                                href={game.purchase_links.epic}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="matrix-button-small"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                🎮 Buy on Epic
-                              </a>
-                            )}
-                          </div>
-                        )}
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {/* Twitch Directory Link */}
+                          <a
+                            href={getTwitchUrl(game.name)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="matrix-button-small bg-purple-600 hover:bg-purple-700 border-purple-500"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            📺 View on Twitch
+                          </a>
+                          
+                          {game.purchase_links.steam && (
+                            <a
+                              href={game.purchase_links.steam}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="matrix-button-small"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              🎮 Buy on Steam
+                            </a>
+                          )}
+                          {game.purchase_links.epic && (
+                            <a
+                              href={game.purchase_links.epic}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="matrix-button-small"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              🎮 Buy on Epic
+                            </a>
+                          )}
+                        </div>
                       </div>
 
                       {/* Right: Score */}
