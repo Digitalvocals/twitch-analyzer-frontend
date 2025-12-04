@@ -8,6 +8,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Twitch Stream Analyzer - Find the Best Games to Stream',
   description: 'Real-time analysis of Twitch streaming opportunities. Find games with low competition and high discoverability for small streamers.',
+  other: {
+    'google-adsense-account': 'ca-pub-6164260798755117',
+  },
 }
 
 export default function RootLayout({
