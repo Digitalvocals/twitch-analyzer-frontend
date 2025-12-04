@@ -155,7 +155,7 @@ export default function Home() {
           {/* Main Game Grid */}
           <main className="flex-1 min-w-0">
             <div className="grid gap-4">
-          {data?.top_opportunities.map((game) => (
+              {data?.top_opportunities.map((game) => (
             <div 
               key={game.rank} 
               className="matrix-card cursor-pointer"
@@ -270,13 +270,13 @@ export default function Home() {
                   </div>
                 </div>
               )}
-            </div>
-          ))}
-        </div>
-      </main>
+              </div>
+            ))}
+          </div>
+        </main>
 
-      {/* Right Sidebar - Desktop Only */}
-      <aside className="hidden lg:block w-80 flex-shrink-0">
+        {/* Right Sidebar - Desktop Only */}
+        <aside className="hidden lg:block w-80 flex-shrink-0">
         <div className="sticky top-4 space-y-4">
           {/* Ad Space 1 - 300x250 */}
           <div className="border-2 border-matrix-green/50 rounded-lg p-4 bg-black/50">
@@ -303,18 +303,18 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </div>
-      </aside>
-    </div>
+          </div>
+        </aside>
+      </div>
 
-    {/* Footer */}
-    <footer className="mt-12 pt-8 border-t border-matrix-green/30 text-center text-sm text-matrix-green-dim">
+      {/* Footer */}
+      <footer className="mt-12 pt-8 border-t border-matrix-green/30 text-center text-sm text-matrix-green-dim">
       <p>Built by <span className="text-matrix-green font-bold">DIGITALVOCALS</span></p>
       <p className="mt-2">Data updates every 15 minutes • Powered by Twitch API</p>
       <p className="mt-2">
         Affiliate Disclosure: We may earn a commission from game purchases through our links.
-      </p>
-    </footer>
-  </div>
+        </p>
+      </footer>
+    </div>
   )
 }
