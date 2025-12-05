@@ -118,12 +118,13 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <header className="mb-8">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 animate-glow">
-            [ STREAMSCOUT ]
-          </h1>
-          <p className="text-xl text-matrix-green-dim mb-6">
-            Find the BEST games to stream RIGHT NOW • Real-time analysis • 120+ Opportunities
-          </p>
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/streamscout-logo.jpg" 
+              alt="StreamScout - Find Your Audience. Grow Your Channel."
+              className="w-full max-w-3xl h-auto"
+            />
+          </div>
           
           {data && (
             <div className="flex flex-wrap gap-4 text-sm">
