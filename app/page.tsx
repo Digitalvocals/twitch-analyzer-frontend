@@ -122,7 +122,7 @@ export default function Home() {
             <img 
               src="/streamscout-logo.jpg" 
               alt="StreamScout - Find Your Audience. Grow Your Channel."
-              className="w-full max-w-3xl h-auto"
+              className="w-full max-w-2xl h-auto"
             />
           </div>
           
