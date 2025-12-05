@@ -7,7 +7,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 
 interface GameOpportunity {
   rank: number
-  name: string
+  game_name: string
   total_viewers: number
   channels: number
   avg_viewers_per_channel: number
@@ -157,7 +157,7 @@ export default function Home() {
                       <div className="flex-shrink-0">
                         <img 
                           src={game.box_art_url} 
-                          alt={game.name}
+                          alt={game.game_name}
                           className="w-32 h-44 object-cover rounded border-2 border-matrix-green/50"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none'
@@ -175,7 +175,7 @@ export default function Home() {
                             #{game.rank}
                           </div>
                           <div>
-                            <h2 className="text-2xl font-bold">{game.name}</h2>
+                            <h2 className="text-2xl font-bold">{game.game_name}</h2>
                             <div className="text-sm text-matrix-green-dim">
                               {game.total_viewers?.toLocaleString() || 0} viewers • {game.channels} channels
                             </div>
@@ -186,7 +186,7 @@ export default function Home() {
                         <div className="flex flex-wrap gap-2 mt-3">
                           {/* Twitch Directory Link */}
                           <a
-                            href={getTwitchUrl(game.name)}
+                            href={getTwitchUrl(game.game_name)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="matrix-button-small bg-purple-600 hover:bg-purple-700 border-purple-500"
