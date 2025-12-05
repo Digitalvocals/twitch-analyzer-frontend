@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
@@ -29,14 +29,21 @@ interface AnalysisData {
   timestamp: string
   total_games_analyzed: number
   top_opportunities: GameOpportunity[]
-  // Support both old and new backend field names
-  cache_expires_in_seconds?: number
-  next_refresh_in_seconds?: number
-  next_update?: string
-  // Warmup state
-  status?: string
-  message?: string
+  cache_expires_in_seconds?: number  // Old field name (backwards compat)
+  next_refresh_in_seconds?: number   // New field name
+  next_update: string
   is_refreshing?: boolean
+}
+
+interface StatusData {
+  cache: {
+    has_data: boolean
+    age_seconds: number | null
+    next_refresh_seconds: number
+  }
+  worker: {
+    is_refreshing: boolean
+  }
 }
 
 export default function Home() {
@@ -46,73 +53,126 @@ export default function Home() {
   const [selectedGame, setSelectedGame] = useState<GameOpportunity | null>(null)
   const [countdown, setCountdown] = useState<number>(0)
   const [isWarmingUp, setIsWarmingUp] = useState(false)
+  const [warmupStatus, setWarmupStatus] = useState<string>('Initializing...')
 
   // Helper function to create Twitch search URL
   const getTwitchUrl = (gameName: string) => {
     return `https://www.twitch.tv/search?term=${encodeURIComponent(gameName)}`
   }
 
-  useEffect(() => {
-    fetchData()
-    const interval = setInterval(fetchData, 15 * 60 * 1000)
-    return () => clearInterval(interval)
+  // Check status endpoint for warmup progress
+  const checkStatus = useCallback(async () => {
+    try {
+      const response = await axios.get<StatusData>(`${API_URL}/api/v1/status`)
+      const status = response.data
+      
+      if (status.worker.is_refreshing) {
+        setWarmupStatus('Fetching stream data from Twitch API...')
+      } else if (status.cache.has_data) {
+        setWarmupStatus('Data ready!')
+        return true // Has data
+      } else {
+        setWarmupStatus('Waiting for initial data fetch...')
+      }
+      return false
+    } catch (err) {
+      setWarmupStatus('Connecting to server...')
+      return false
+    }
   }, [])
 
-  useEffect(() => {
-    if (data && data.top_opportunities) {
-      // Support both old and new backend field names
-      const refreshSeconds = data.next_refresh_in_seconds ?? data.cache_expires_in_seconds ?? 600
-      setCountdown(refreshSeconds)
-      const timer = setInterval(() => {
-        setCountdown((prev) => Math.max(0, prev - 1))
-      }, 1000)
-      return () => clearInterval(timer)
-    }
-  }, [data])
-
-  // Auto-retry when warming up
-  useEffect(() => {
-    if (isWarmingUp) {
-      const retryTimer = setTimeout(() => {
-        fetchData()
-      }, 5000) // Retry every 5 seconds during warmup
-      return () => clearTimeout(retryTimer)
-    }
-  }, [isWarmingUp])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true)
       const response = await axios.get(`${API_URL}/api/v1/analyze?limit=500`)
       
-      // Check if backend is still warming up (202 status or status field)
+      // Check if warming up (202 status or warming_up status)
       if (response.status === 202 || response.data.status === 'warming_up') {
         setIsWarmingUp(true)
         setData(null)
-        setError(null)
-      } else {
-        setIsWarmingUp(false)
-        setData(response.data)
-        setError(null)
+        return false
       }
+      
+      setIsWarmingUp(false)
+      setData(response.data)
+      setError(null)
+      
+      // Set countdown from whichever field exists
+      const refreshSeconds = response.data.next_refresh_in_seconds ?? 
+                            response.data.cache_expires_in_seconds ?? 
+                            600
+      setCountdown(refreshSeconds)
+      
+      return true
     } catch (err: any) {
-      // Handle 202 responses that axios might treat as errors
+      // 202 comes as an error with axios sometimes
       if (err.response?.status === 202 || err.response?.data?.status === 'warming_up') {
         setIsWarmingUp(true)
         setData(null)
-        setError(null)
-      } else {
-        setIsWarmingUp(false)
-        setError('Failed to load data. Please try again later.')
-        console.error(err)
+        return false
       }
+      setError('Failed to load data. Please try again later.')
+      console.error(err)
+      return false
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  // Initial load
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  // Warmup polling - check status every 3 seconds while warming up
+  useEffect(() => {
+    if (!isWarmingUp) return
+
+    const pollStatus = async () => {
+      const hasData = await checkStatus()
+      if (hasData) {
+        // Data is ready, fetch it
+        await fetchData()
+      }
+    }
+
+    // Start polling
+    pollStatus()
+    const interval = setInterval(pollStatus, 3000)
+    
+    return () => clearInterval(interval)
+  }, [isWarmingUp, checkStatus, fetchData])
+
+  // Countdown timer
+  useEffect(() => {
+    if (!data || countdown <= 0) return
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          // Countdown hit 0 - fetch fresh data
+          fetchData()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [data, countdown, fetchData])
+
+  // Also poll for updates every 60 seconds (in case countdown drifts)
+  useEffect(() => {
+    if (!data) return
+    
+    const interval = setInterval(() => {
+      fetchData()
+    }, 60 * 1000)
+    
+    return () => clearInterval(interval)
+  }, [data, fetchData])
 
   const formatCountdown = (seconds: number) => {
-    if (isNaN(seconds) || seconds < 0) return '10:00'
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, '0')}`
@@ -125,35 +185,19 @@ export default function Home() {
     return 'score-poor'
   }
 
-  // Warming up state
-  if (isWarmingUp) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md px-4">
-          <div className="text-4xl sm:text-6xl mb-4 animate-glow">[ WARMING UP ]</div>
-          <div className="text-matrix-green-dim mb-4">
-            StreamScout is fetching fresh data from Twitch...
-          </div>
-          <div className="text-matrix-green-dim text-sm">
-            This takes about 90 seconds after a server restart.
-          </div>
-          <div className="mt-6">
-            <div className="inline-block w-8 h-8 border-4 border-matrix-green border-t-transparent rounded-full animate-spin"></div>
-          </div>
-          <div className="text-matrix-green-dim text-xs mt-4">
-            Auto-retrying every 5 seconds...
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (loading && !data) {
+  // Warmup screen
+  if (isWarmingUp || (loading && !data)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="text-6xl mb-4 animate-glow">[ LOADING ]</div>
-          <div className="text-matrix-green-dim">Analyzing Twitch data...</div>
+          <div className="text-4xl sm:text-6xl mb-4 animate-glow">[ WARMING UP ]</div>
+          <div className="text-matrix-green-dim mb-4">{warmupStatus}</div>
+          <div className="flex justify-center">
+            <div className="w-8 h-8 border-2 border-matrix-green border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <div className="text-matrix-green-dim mt-4 text-sm">
+            First load takes ~30 seconds. Auto-refreshing...
+          </div>
         </div>
       </div>
     )
@@ -358,7 +402,7 @@ export default function Home() {
         {/* Footer */}
         <footer className="mt-12 pt-8 border-t border-matrix-green/30 text-center text-sm text-matrix-green-dim">
           <p>Built by <span className="text-matrix-green font-bold">DIGITALVOCALS</span></p>
-          <p className="mt-2">Data updates every 10 minutes • Powered by Twitch API</p>
+          <p className="mt-2">Data auto-updates every 10 minutes • Powered by Twitch API</p>
           <p className="mt-2">
             Affiliate Disclosure: We may earn a commission from game purchases through our links.
           </p>
