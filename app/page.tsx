@@ -18,6 +18,7 @@ interface GameOpportunity {
   recommendation: string
   trend: string
   box_art_url: string | null
+  genres: string[]
   purchase_links: {
     steam: string | null
     epic: string | null
@@ -54,6 +55,29 @@ export default function Home() {
   const [countdown, setCountdown] = useState<number>(0)
   const [isWarmingUp, setIsWarmingUp] = useState(false)
   const [warmupStatus, setWarmupStatus] = useState<string>('Initializing...')
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([])
+  
+  // Available genre filters
+  const GENRE_OPTIONS = [
+    'Action', 'Adventure', 'Battle Royale', 'Card Game', 'FPS', 'Fighting',
+    'Horror', 'Indie', 'MMO', 'MOBA', 'Party', 'Platformer', 'Puzzle',
+    'RPG', 'Racing', 'Sandbox', 'Simulation', 'Sports', 'Strategy', 'Survival'
+  ]
+
+  // Toggle genre filter
+  const toggleGenre = (genre: string) => {
+    setSelectedGenres(prev => 
+      prev.includes(genre) 
+        ? prev.filter(g => g !== genre)
+        : [...prev, genre]
+    )
+  }
+
+  // Filter opportunities by selected genres
+  const filteredOpportunities = data?.top_opportunities?.filter(game => {
+    if (selectedGenres.length === 0) return true
+    return game.genres?.some(g => selectedGenres.includes(g))
+  }) || []
 
   // Helper function to create Twitch search URL
   const getTwitchUrl = (gameName: string) => {
@@ -263,8 +287,45 @@ export default function Home() {
         <div className="flex gap-8">
           {/* Main Game Grid - Full Width */}
           <main className="w-full">
+            {/* Genre Filter Chips */}
+            <div className="mb-6">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-matrix-green/70 text-sm mr-2">Filter by genre:</span>
+                {GENRE_OPTIONS.map(genre => (
+                  <button
+                    key={genre}
+                    onClick={() => toggleGenre(genre)}
+                    className={`px-3 py-1 rounded-full text-sm transition-all ${
+                      selectedGenres.includes(genre)
+                        ? 'bg-matrix-green text-black font-semibold'
+                        : 'bg-matrix-green/10 text-matrix-green border border-matrix-green/30 hover:bg-matrix-green/20'
+                    }`}
+                  >
+                    {genre}
+                  </button>
+                ))}
+                {selectedGenres.length > 0 && (
+                  <button
+                    onClick={() => setSelectedGenres([])}
+                    className="px-3 py-1 rounded-full text-sm bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 ml-2"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+              {selectedGenres.length > 0 && (
+                <div className="text-matrix-green/50 text-sm mt-2">
+                  Showing {filteredOpportunities.length} of {data?.top_opportunities?.length || 0} games
+                </div>
+              )}
+            </div>
+
             <div className="grid gap-4">
-              {data?.top_opportunities?.map((game) => (
+              {filteredOpportunities.length === 0 && selectedGenres.length > 0 ? (
+                <div className="text-center py-12 text-matrix-green/50">
+                  No games found matching selected genres. Try different filters.
+                </div>
+              ) : filteredOpportunities.map((game) => (
                 <div 
                   key={game.rank} 
                   className="matrix-card cursor-pointer"
@@ -303,6 +364,19 @@ export default function Home() {
                           <div className="text-xs sm:text-sm text-matrix-green-dim mt-1">
                             {game.total_viewers?.toLocaleString() || 0} viewers • {game.channels} channels
                           </div>
+                          {/* Genre Tags */}
+                          {game.genres && game.genres.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {game.genres.slice(0, 3).map(genre => (
+                                <span 
+                                  key={genre}
+                                  className="px-2 py-0.5 text-[10px] sm:text-xs rounded bg-matrix-green/10 text-matrix-green/70 border border-matrix-green/20"
+                                >
+                                  {genre}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         
                         {/* Score - Always Visible */}
